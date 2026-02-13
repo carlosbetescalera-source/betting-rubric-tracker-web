@@ -1,0 +1,9 @@
+{
+  "name": "Betting Rubric Tracker",
+  "short_name": "BetTracker",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007aff",
+  "icons": []
+}
