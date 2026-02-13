@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Betting Rubric Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Betting Rubric Tracker</h1>
+
+  <div id="bank">Bank: 1000 €</div>
+
+  <form id="betForm">
+    <input placeholder="Competición" id="competition" required />
+    <input placeholder="Mercado" id="market" required />
+    <input placeholder="Selección" id="selection" required />
+    <input type="number" step="0.01" placeholder="Cuota" id="odds" required />
+
+    <label>Confianza</label>
+    <input type="number" min="1" max="10" id="confidence" required />
+
+    <label>Disciplina</label>
+    <input type="number" min="1" max="10" id="discipline" required />
+
+    <label>Valor</label>
+    <input type="number" min="1" max="10" id="value" required />
+
+    <button type="submit">Guardar apuesta</button>
+  </form>
+
+  <script src="app.js"></script>
+</body>
+</html>
