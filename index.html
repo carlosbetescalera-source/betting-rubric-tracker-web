@@ -4,32 +4,234 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Betting Rubric Tracker</title>
+
+  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#007aff">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f5f5f7;
+      color: #111;
+    }
+    h1 { text-align: center; margin-bottom: 12px; }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.06);
+    }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+    label { font-size: 12px; color: #555; }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 4px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+    button {
+      background: #007aff;
+      color: #fff;
+      border: none;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: #e5e5ea;
+      color: #111;
+    }
+    .bank {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .muted { color: #666; font-size: 12px; }
+    .ok { color: #0a7a2f; }
+    .warn { color: #c05a00; }
+    .bad { color: #c00000; }
+    ul { padding-left: 18px; }
+    li { margin-bottom: 6px; }
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eef3ff;
+      color: #1b4cff;
+    }
+  </style>
 </head>
 <body>
+
   <h1>Betting Rubric Tracker</h1>
 
-  <div id="bank">Bank: 1000 €</div>
+  <!-- BANK -->
+  <div class="card">
+    <div class="bank" id="bankText">Bank: 1000 €</div>
+    <div class="muted" style="text-align:center">Stake automático según score</div>
+  </div>
 
-  <form id="betForm">
-    <input placeholder="Competición" id="competition" required />
-    <input placeholder="Mercado" id="market" required />
-    <input placeholder="Selección" id="selection" required />
-    <input type="number" step="0.01" placeholder="Cuota" id="odds" required />
+  <!-- NUEVA APUESTA -->
+  <div class="card">
+    <h3>Nueva apuesta</h3>
 
-    <label>Confianza</label>
-    <input type="number" min="1" max="10" id="confidence" required />
+    <label>Competición</label>
+    <input id="competition" placeholder="Ej. Premier League" />
 
-    <label>Disciplina</label>
-    <input type="number" min="1" max="10" id="discipline" required />
+    <label>Mercado</label>
+    <input id="market" placeholder="Ej. +0.5 goles" />
 
-    <label>Valor</label>
-    <input type="number" min="1" max="10" id="value" required />
+    <label>Selección</label>
+    <input id="selection" placeholder="Ej. Arsenal" />
 
-    <button type="submit">Guardar apuesta</button>
-  </form>
+    <label>Cuota</label>
+    <input id="odds" type="number" step="0.01" value="1.80" />
 
-  <script src="app.js"></script>
+    <div class="row">
+      <div>
+        <label>Confianza (1–10)</label>
+        <input id="confidence" type="number" min="1" max="10" value="7" />
+      </div>
+      <div>
+        <label>Disciplina (1–10)</label>
+        <input id="discipline" type="number" min="1" max="10" value="7" />
+      </div>
+      <div>
+        <label>Valor (1–10)</label>
+        <input id="value" type="number" min="1" max="10" value="7" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <span class="pill">Score</span>
+        <div id="scoreText" class="ok">7</div>
+      </div>
+      <div>
+        <span class="pill">Stake</span>
+        <div id="stakeText">—</div>
+      </div>
+    </div>
+
+    <button id="saveBtn">Guardar apuesta</button>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="card">
+    <h3>Historial</h3>
+    <ul id="history"></ul>
+  </div>
+
+<script>
+/* ====== ESTADO ====== */
+let bank = Number(localStorage.getItem("bank")) || 1000;
+let bets = JSON.parse(localStorage.getItem("bets") || "[]");
+
+/* ====== HELPERS ====== */
+function calcScore(c, d, v) {
+  return Math.floor((c + d + v) / 3);
+}
+function stakeByScore(score, bank) {
+  if (score >= 9) return round(bank * 0.05);
+  if (score === 8) return round(bank * 0.04);
+  if (score === 7) return round(bank * 0.03);
+  return 0;
+}
+function round(n){ return Math.round(n * 100) / 100; }
+
+/* ====== UI ====== */
+const bankText = document.getElementById("bankText");
+const scoreText = document.getElementById("scoreText");
+const stakeText = document.getElementById("stakeText");
+const historyUl = document.getElementById("history");
+
+function renderBank() {
+  bankText.textContent = `Bank: ${round(bank)} €`;
+}
+function renderHistory() {
+  historyUl.innerHTML = "";
+  bets.slice().reverse().forEach(b => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <strong>${b.selection}</strong> @${b.odds} ·
+      Stake ${b.stake} € ·
+      <span class="${b.score>=7?'ok':'bad'}">Score ${b.score}</span>
+    `;
+    historyUl.appendChild(li);
+  });
+}
+
+/* ====== INTERACCIÓN ====== */
+function recalc() {
+  const c = Number(confidence.value);
+  const d = Number(discipline.value);
+  const v = Number(value.value);
+  const score = calcScore(c,d,v);
+  scoreText.textContent = score;
+  scoreText.className = score>=7 ? "ok" : "bad";
+
+  const stake = stakeByScore(score, bank);
+  stakeText.textContent = stake>0 ? `${stake} €` : "—";
+}
+
+["confidence","discipline","value"].forEach(id=>{
+  document.getElementById(id).addEventListener("input", recalc);
+});
+
+document.getElementById("saveBtn").addEventListener("click", ()=>{
+  const comp = competition.value.trim();
+  const mar = market.value.trim();
+  const sel = selection.value.trim();
+  const odds = Number(document.getElementById("odds").value);
+
+  const c = Number(confidence.value);
+  const d = Number(discipline.value);
+  const v = Number(value.value);
+  const score = calcScore(c,d,v);
+
+  if (!comp || !mar || !sel || odds <= 1) {
+    alert("Completa todos los campos correctamente.");
+    return;
+  }
+  if (score < 7) {
+    alert("Score insuficiente para apostar.");
+    return;
+  }
+
+  const stake = stakeByScore(score, bank);
+  if (stake <= 0 || stake > bank) {
+    alert("Stake no válido.");
+    return;
+  }
+
+  bank = round(bank - stake);
+  const bet = { date: Date.now(), comp, mar, sel, odds, stake, score };
+  bets.push(bet);
+
+  localStorage.setItem("bank", bank);
+  localStorage.setItem("bets", JSON.stringify(bets));
+
+  renderBank();
+  renderHistory();
+  alert(`Apuesta guardada\nScore ${score}\nStake ${stake} €`);
+});
+
+/* ====== INIT ====== */
+renderBank();
+renderHistory();
+recalc();
+
+/* ====== SERVICE WORKER ====== */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
 </body>
 </html>
